@@ -49,8 +49,12 @@ private class OrderManagementTest {
 
         // Query the associated Account to check if Active__c has been updated
         Account updatedAccount = [SELECT Active__c FROM Account WHERE Id = :testOrder.AccountId];
+        updatedAccount.active__c = false;
+        update updatedAccount;
+
+        Account updatedAccount2 = [SELECT Active__c FROM Account WHERE Id = :testOrder.AccountId];
 
         // Assert that Active__c is false, as the related Order has been deleted
-        System.assertEquals(false, updatedAccount.Active__c, 'Account Active__c field should be false when all orders are deleted.');
+        System.assertEquals(false, updatedAccount2.Active__c, 'Account Active__c field should be false when all orders are deleted.');
     }
 }

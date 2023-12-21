@@ -10,10 +10,10 @@ private class OrderBeforeUpdateTriggerTest {
         Product2 testProduct = new Product2(Name = 'Test Product', IsActive = true);
         insert testProduct;
 
-        Pricebook2 standardPricebook = [SELECT Id FROM Pricebook2 WHERE IsStandard = true LIMIT 1];
+        Id standardPricebookId = Test.getStandardPricebookId();
 
         PricebookEntry standardPricebookEntry = new PricebookEntry(
-            Pricebook2Id = standardPricebook.Id,
+            Pricebook2Id = standardPricebookId,
             Product2Id = testProduct.Id,
             UnitPrice = 100.0,
             IsActive = true
@@ -24,7 +24,7 @@ private class OrderBeforeUpdateTriggerTest {
             AccountId = testAccount.Id,
             Status = 'Draft',
             EffectiveDate = Date.today(),
-            Pricebook2Id = standardPricebook.Id
+            Pricebook2Id = standardPricebookId
         );
         insert testOrder;
 

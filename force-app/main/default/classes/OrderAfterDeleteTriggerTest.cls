@@ -6,6 +6,8 @@ private class OrderAfterDeleteTriggerTest {
         // Create and insert necessary test data
         Account testAccount = new Account(Name = 'Test Account');
         insert testAccount;
+        Order testOrder = new Order(Name = 'Test Order', AccountId = testAccount.Id, EffectiveDate = Date.today(), Status = 'Draft');
+        insert testOrder;
 
         // Create additional test data as required...
         // Ensure that you create Orders that can be deleted in the test method

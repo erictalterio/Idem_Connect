@@ -58,6 +58,15 @@ private class OrderVerificationTest {
             UnitPrice = 100.0
         );
         insert testOrderItem;
+
+        OrderItem lineItem = new OrderItem();
+        lineItem.OrderId = testOrder.id;
+        lineItem.Quantity = 1;
+        lineItem.UnitPrice = 100.0;
+        lineItem.Product2id = testProduct.id;
+        lineItem.PricebookEntryId = standardPricebookEntry.id;
+    insert lineItem;
+
     }
 
     @isTest
