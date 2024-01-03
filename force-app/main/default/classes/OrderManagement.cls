@@ -20,8 +20,11 @@ public class OrderManagement {
         List<Account> accountsToUpdate = new List<Account>();
         for (Id accId : accountIds) {
             AggregateResult ar = ordersCountMap.get(accId);
-            if (ar == null || (Integer)ar.get('numOrders') == 0) {
-                accountsToUpdate.add(new Account(Id = accId, Active__c = false));
+            if (ar == null || (Integer)ar.get('numOrders') == 0)
+            {
+                Account accToUpdate = new Account(Id = accId);
+                accToUpdate.put('Active__c', false);
+                accountsToUpdate.add(accToUpdate);
             }
         }
 

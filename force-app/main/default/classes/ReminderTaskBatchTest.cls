@@ -1,40 +1,31 @@
-/**
- * This class contains unit tests for validating the behavior of Apex classes
- * and triggers.
- *
- * Unit tests are class methods that verify whether a particular piece
- * of code is working properly. Unit test methods take no arguments,
- * commit no data to the database, and are flagged with the testMethod
- * keyword in the method definition.
- *
- * All test methods in an org are executed whenever Apex code is deployed
- * to a production org to confirm correctness, ensure code
- * coverage, and prevent regressions. All Apex classes are
- * required to have at least 75% code coverage in order to be deployed
- * to a production org. In addition, all triggers must have some code coverage.
- * 
- * The @isTest class annotation indicates this class only contains test
- * methods. Classes defined with the @isTest annotation do not count against
- * the org size limit for all Apex scripts.
- *
- * See the Apex Language Reference for more information about Testing and Code Coverage.
- */
 @isTest
 private class ReminderTaskBatchTest {
 
     @TestSetup
     static void setup() {
-        // Create test data required for the test scenarios
-        Account testAccount = new Account(Name = 'Test Account');
-        insert testAccount;
+        // Create two accounts
+        Account testAccount1 = new Account(Name = 'Test Account 1');
+        Account testAccount2 = new Account(Name = 'Test Account 2');
+        insert new List<Account>{testAccount1, testAccount2};
 
-        Task testTask = new Task(
-            WhatId = testAccount.Id,
+        // Create a 'Call' task for the second account
+        Task callTaskForAccount2 = new Task(
+            WhatId = testAccount2.Id,
+            Subject = 'Call',
+            Status = 'Completed',
+            Priority = 'Normal',
+            Type = 'Call'
+        );
+        insert callTaskForAccount2;
+
+        // Create a different type of task for the first account
+        Task nonCallTaskForAccount1 = new Task(
+            WhatId = testAccount1.Id,
             Subject = 'Email',
             Status = 'Completed',
             Priority = 'Normal'
         );
-        insert testTask;
+        insert nonCallTaskForAccount1;
     }
 
     @isTest
@@ -44,7 +35,12 @@ private class ReminderTaskBatchTest {
         Database.executeBatch(batch);
         Test.stopTest();
 
-        List<Task> tasks = [SELECT Id, WhatId FROM Task WHERE WhatId IN (SELECT Id FROM Account) AND Subject = 'Call'];
-        System.assertNotEquals(0, tasks.size(), 'There should be reminder tasks created for accounts without Call tasks.');
+        // Assert that a new 'Call' task is created for the first account
+        List<Task> tasksForAccount1 = [SELECT Id FROM Task WHERE WhatId = :[SELECT Id FROM Account WHERE Name = 'Test Account 1'].Id AND Subject = 'Call'];
+        System.assertEquals(1, tasksForAccount1.size(), 'There should be a new Call task for the first account.');
+
+        // Assert that no new 'Call' task is created for the second account
+        List<Task> tasksForAccount2 = [SELECT Id FROM Task WHERE WhatId = :[SELECT Id FROM Account WHERE Name = 'Test Account 2'].Id AND Subject = 'Call'];
+        System.assertEquals(1, tasksForAccount2.size(), 'No new Call task should be created for the second account.');
     }
 }
