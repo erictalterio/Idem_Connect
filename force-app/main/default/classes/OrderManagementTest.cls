@@ -1,51 +1,107 @@
 @isTest
-private class OrderManagementTest {
-
-    static Account testAccountWithOrders;
-    static Account testAccountWithoutOrders;
-
-    @TestSetup
-    static void setup() {
-        // Create two accounts
-        testAccountWithOrders = new Account(Name = 'Test Account With Orders', Active__c = true);
-        testAccountWithoutOrders = new Account(Name = 'Test Account Without Orders', Active__c = true);
-        insert new List<Account>{testAccountWithOrders, testAccountWithoutOrders};
-
-        // Create orders only for the first account
-        Order order = new Order(
-            AccountId = testAccountWithOrders.Id,
-            Status = 'Draft',
-            EffectiveDate = Date.today()
-        );
-        insert order;
-    }
+public class OrderManagementTest
+{
+    // Declare test data at the class level
+    static List<Account> testAccounts;
+    static List<Product2> testProducts;
+    static List<PricebookEntry> testPricebookEntries;
+    static List<Order> testOrders;
+    static List<OrderItem> testOrderItems;
 
     @isTest
-    static void testHandleOrderDeletionWithRemainingOrders() {
-        // Test scenario where there are still remaining orders
-        OrderManagement.handleOrderDeletion(new Set<Id>{});
-        
-        Account refreshedAccount = [SELECT Active__c FROM Account WHERE Id = :testAccountWithOrders.Id];
-        System.assertEquals(true, refreshedAccount.Active__c, 'Active__c should remain true as there are still orders.');
-    }
+    static void testHandleOrderDeletion()
+    {
+        // Create test data - Accounts
+        testAccounts = new List<Account>();
+        for (Integer i = 0; i < 3; i++) {
+            testAccounts.add(new Account(Name = 'Test Account ' + i, Active__c = true));
+        }
+        insert testAccounts;
 
-    @isTest
-    static void testHandleOrderDeletionWithoutRemainingOrders() {
-        // Retrieve all orders for the account with orders
-        List<Order> orders = [SELECT Id FROM Order WHERE AccountId = :testAccountWithOrders.Id];
-        Set<Id> orderIdsToDelete = new Set<Id>();
-        for (Order ord : orders) {
-            orderIdsToDelete.add(ord.Id);
+        // Create test data - Products
+        testProducts = new List<Product2>();
+        for (Integer i = 0; i < 3; i++) {
+            testProducts.add(new Product2(
+                                 Name     = 'Test Product ' + i,
+                                 IsActive = true
+                                 ));
+        }
+        insert testProducts;
+
+        // Create test data - PricebookEntry records associated with Products
+        testPricebookEntries = new List<PricebookEntry>();
+        for (Product2 prod : testProducts) {
+            testPricebookEntries.add(new PricebookEntry(
+                                         Pricebook2Id = Test.getStandardPricebookId(),
+                                         Product2Id   = prod.Id,
+                                         UnitPrice    = 100.00,
+                                         IsActive     = true
+                                         ));
+        }
+        insert testPricebookEntries;
+
+        // Create test data - Orders associated with Accounts and Products
+        testOrders     = new List<Order>();
+        testOrderItems = new List<OrderItem>();
+        for (Integer i = 0; i < 3; i++) {
+            Order testOrder = new Order(
+                AccountId     = testAccounts[i].Id,
+                Status        = 'Draft',
+                EffectiveDate = Date.today(),
+                Pricebook2Id  = Test.getStandardPricebookId()
+                );
+
+            testOrders.add(testOrder);
+            insert testOrder;
+
+            testOrderItems.add(new OrderItem(
+                                   OrderId          = testOrders[i].Id,
+                                   PricebookEntryId = testPricebookEntries[i].Id,
+                                   Quantity         = 1,
+                                   UnitPrice        = 100.00
+                                   ));
+        }
+        insert testOrderItems;
+
+        // Set up the test by deleting some orders
+        Set<Id> deletedOrderIds = new Set<Id>();
+        for (Integer i = 0; i < 2; i++) {
+            deletedOrderIds.add(testOrders[i].Id);
         }
 
-        // Delete the orders to trigger the logic in OrderManagement
-        delete orders;
+        // Scenario 1: No deleted orders
+        Test.startTest();
+        OrderManagement.handleOrderDeletion(new Set<Id>());
 
-        // Call OrderManagement logic
-        OrderManagement.handleOrderDeletion(orderIdsToDelete);
 
-        // Query the account to check if Active__c has been updated
-        Account updatedAccount = [SELECT Active__c FROM Account WHERE Id = :testAccountWithOrders.Id];
-        System.assertEquals(false, updatedAccount.Active__c, 'Active__c should be false as the account no longer has any orders.');
+        System.assertEquals(3, testAccounts.size(), 'No accounts should be updated');
+        for (Account acc : testAccounts) {
+            System.assertEquals(true, acc.Active__c, 'Account should remain active');
+        }
+
+        // Scenario 2: All orders are deleted
+        Set<Id> allDeletedOrderIds = new Set<Id>();
+        for (Order ord : testOrders) {
+            allDeletedOrderIds.add(ord.Id);
+        }
+        // Reset the test accounts to their original state
+        testAccounts = [SELECT Id, Active__c FROM Account WHERE Id IN : testAccounts];
+        OrderManagement.handleOrderDeletion(allDeletedOrderIds);
+
+        testAccounts = [SELECT Id, Active__c FROM Account WHERE Id IN : testAccounts];
+        System.assertEquals(0, [SELECT COUNT() FROM Account WHERE Active__c = false], 'All accounts should be inactive');
+
+        // Scenario 3: Some orders are deleted, but some still exist
+        Set<Id> partialDeletedOrderIds = new Set<Id>();
+        for (Integer i = 0; i < 2; i++) {
+            partialDeletedOrderIds.add(testOrders[i].Id);
+        }
+        // Reset the test accounts to their original state
+        testAccounts = [SELECT Id, Active__c FROM Account WHERE Id IN : testAccounts];
+        OrderManagement.handleOrderDeletion(partialDeletedOrderIds);
+        Test.stopTest();
+
+        testAccounts = [SELECT Id, Active__c FROM Account WHERE Id IN : testAccounts];
+        System.assertEquals(3, [SELECT COUNT() FROM Account WHERE Active__c = true], 'Remaining accounts should remain active');
     }
 }
