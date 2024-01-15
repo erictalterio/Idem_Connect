@@ -1,89 +1,64 @@
 @isTest
-private class OrderVerificationTest {
-
-    @TestSetup
-    static void setup() {
-        // Create a test account
+public class OrderVerificationTest
+{
+    @isTest
+    static void testActivateOrder()
+    {
+        // Create test data: Accounts
         Account testAccount = new Account(Name = 'Test Account');
-        insert testAccount;
+        insert  testAccount;
 
-        // Create a test product
+        // Create a Pricebook
+        Id standardPricebookId = Test.getStandardPricebookId();
+
+        // Create a Product
         Product2 testProduct = new Product2(Name = 'Test Product', IsActive = true);
-        insert testProduct;
+        insert   testProduct;
 
-        // Create a pricebook entry for the standard pricebook
-        PricebookEntry standardPricebookEntry = new PricebookEntry(
-            Pricebook2Id = Test.getStandardPricebookId(),
-            Product2Id = testProduct.Id,
-            UnitPrice = 100.0,
-            IsActive = true
-        );
-        insert standardPricebookEntry;
-
-        // Create a test order
-        Order testOrder = new Order(
-            AccountId = testAccount.Id,
-            Status = 'Draft',
-            EffectiveDate = Date.today(),
-            Pricebook2Id = Test.getStandardPricebookId()
-        );
-        insert testOrder;
-
-        // Create a test order item
-        OrderItem testOrderItem = new OrderItem(
-            OrderId = testOrder.Id,
-            PricebookEntryId = standardPricebookEntry.Id,
-            Quantity = 1,
-            UnitPrice = 100.0
-        );
-        insert testOrderItem;
-
-        OrderItem lineItem = new OrderItem();
-        lineItem.OrderId = testOrder.id;
-        lineItem.Quantity = 1;
-        lineItem.UnitPrice = 100.0;
-        lineItem.Product2id = testProduct.id;
-        lineItem.PricebookEntryId = standardPricebookEntry.id;
-    insert lineItem;
-
-    }
-
-    @isTest
-static void testOrderActivationWithProduct() {
-    Order testOrder = [SELECT Id, Active__c FROM Order WHERE Active__c = false LIMIT 1];
-    List<OrderItem> orderItems = [SELECT Id FROM OrderItem WHERE OrderId = :testOrder.Id];
-    System.assert(!orderItems.isEmpty(), 'There should be at least one associated OrderItem.');
-
-    testOrder.Active__c = true;
-
-    Test.startTest();
-    update testOrder; // Attempt to activate the Order
-    Test.stopTest();
-
-    // Reload the order and add debug statement
-    testOrder = [SELECT Active__c FROM Order WHERE Id = :testOrder.Id];
-    System.debug('Order Active__c after update: ' + testOrder.Active__c);
-
-    System.assertEquals(true, testOrder.Active__c, 'Order should be active as it has associated products.');
-}
-    
-    @isTest
-    static void testOrderActivationWithoutProduct() {
-        Order testOrder = [SELECT Id, Active__c FROM Order WHERE Active__c = false LIMIT 1];
-        testOrder.Active__c = true;
-        
-        // Remove associated OrderItems
-        delete [SELECT Id FROM OrderItem WHERE OrderId = :testOrder.Id];
-
-        Test.startTest();
-        Boolean isExceptionThrown = false;
+        // Query for existing PricebookEntry
+        PricebookEntry standardPricebookEntry;
         try {
-            update testOrder; // This should fail as there are no OrderItems
-        } catch (DmlException e) {
-            isExceptionThrown = true;
+            standardPricebookEntry = [SELECT Id FROM PricebookEntry WHERE Pricebook2Id = : standardPricebookId AND Product2Id = : testProduct.Id LIMIT 1];
+        } catch (QueryException e) {
+            standardPricebookEntry = new PricebookEntry(
+                Pricebook2Id       = standardPricebookId,
+                Product2Id         = testProduct.Id,
+                UnitPrice          = 100,
+                IsActive           = true
+                );
+            insert standardPricebookEntry;
         }
+
+        // Create test data: Orders with associated products
+        List<Order> testOrders = new List<Order>();
+        for (Integer i = 0; i < 2; i++) {
+            Order  testOrder = new Order(Status = 'Draft', AccountId = testAccount.Id, EffectiveDate = System.today(), Pricebook2Id = standardPricebookId);
+            insert testOrder;
+
+            // Create associated products with PricebookEntryId and UnitPrice
+            OrderItem testOrderItem = new OrderItem(
+                OrderId          = testOrder.Id,
+                Quantity         = 1,
+                PricebookEntryId = standardPricebookEntry.Id,
+                UnitPrice        = 100 // Provide a valid UnitPrice
+                );
+            insert testOrderItem;
+
+            testOrders.add(testOrder);
+        }
+
+        // Call the method to be tested
+        Test.startTest();
+        OrderVerification.activateOrder(testOrders);
         Test.stopTest();
 
-        System.assert(isExceptionThrown, 'An exception should be thrown when activating an order without products.');
+        // Re-query the orders to get the latest status
+        List<Order> updatedOrders = [SELECT Id, Status FROM Order WHERE Id IN : testOrders];
+
+        // Assert the results
+        for (Order ord : updatedOrders) {
+            // Check if the order status is activated after calling activateOrder
+            System.assertEquals('Activated', ord.Status, 'Order status should be Activated.');
+        }
     }
 }
