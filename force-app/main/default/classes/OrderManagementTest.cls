@@ -73,7 +73,7 @@ public class OrderManagementTest
         Test.startTest();
         OrderManagement.handleOrderDeletion(new Set<Id>());
 
-
+        // Assertions for Scenario 1
         System.assertEquals(3, testAccounts.size(), 'No accounts should be updated');
         for (Account acc : testAccounts) {
             System.assertEquals(true, acc.Active__c, 'Account should remain active');
@@ -84,10 +84,12 @@ public class OrderManagementTest
         for (Order ord : testOrders) {
             allDeletedOrderIds.add(ord.Id);
         }
+
         // Reset the test accounts to their original state
         testAccounts = [SELECT Id, Active__c FROM Account WHERE Id IN : testAccounts];
         OrderManagement.handleOrderDeletion(allDeletedOrderIds);
 
+        // Assertions for Scenario 2
         testAccounts = [SELECT Id, Active__c FROM Account WHERE Id IN : testAccounts];
         System.assertEquals(0, [SELECT COUNT() FROM Account WHERE Active__c = false], 'All accounts should be inactive');
 
@@ -96,11 +98,13 @@ public class OrderManagementTest
         for (Integer i = 0; i < 2; i++) {
             partialDeletedOrderIds.add(testOrders[i].Id);
         }
+
         // Reset the test accounts to their original state
         testAccounts = [SELECT Id, Active__c FROM Account WHERE Id IN : testAccounts];
         OrderManagement.handleOrderDeletion(partialDeletedOrderIds);
         Test.stopTest();
 
+        // Assertions for Scenario 3
         testAccounts = [SELECT Id, Active__c FROM Account WHERE Id IN : testAccounts];
         System.assertEquals(3, [SELECT COUNT() FROM Account WHERE Active__c = true], 'Remaining accounts should remain active');
     }

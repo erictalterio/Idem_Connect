@@ -1,6 +1,7 @@
 @isTest
 private class ReminderTaskSchedulerTest {
 
+    // This test method verifies the functionality of the execute method in the ReminderTaskScheduler class.
     @isTest
     static void testExecuteMethod() {
         // Prepare a schedulable context mock, if necessary
@@ -15,6 +16,7 @@ private class ReminderTaskSchedulerTest {
         // Add any assertions here if there are specific results or changes to be validated
     }
 
+    // This test method verifies the functionality of the schedule method in the ReminderTaskScheduler class.
     @isTest
     static void testScheduleMethod() {
         Test.startTest();

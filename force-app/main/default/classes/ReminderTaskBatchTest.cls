@@ -1,6 +1,7 @@
 @isTest
 private class ReminderTaskBatchTest {
 
+    // This method sets up test data before running the test.
     @TestSetup
     static void setup() {
         // Create two accounts
@@ -28,6 +29,7 @@ private class ReminderTaskBatchTest {
         insert nonCallTaskForAccount1;
     }
 
+    // This test method verifies that the batch creates 'Call' tasks for accounts without existing 'Call' tasks.
     @isTest
     static void testBatchCreatesTasksForAccounts() {
         Test.startTest();

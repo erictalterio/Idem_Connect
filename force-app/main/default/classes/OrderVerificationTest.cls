@@ -1,6 +1,7 @@
 @isTest
 public class OrderVerificationTest
 {
+    // This test method is used to verify the behavior of the 'activateOrder' method.
     @isTest
     static void testActivateOrder()
     {
@@ -15,7 +16,7 @@ public class OrderVerificationTest
         Product2 testProduct = new Product2(Name = 'Test Product', IsActive = true);
         insert   testProduct;
 
-        // Query for existing PricebookEntry
+        // Query for existing PricebookEntry or create a new one if not found
         PricebookEntry standardPricebookEntry;
         try {
             standardPricebookEntry = [SELECT Id FROM PricebookEntry WHERE Pricebook2Id = : standardPricebookId AND Product2Id = : testProduct.Id LIMIT 1];
