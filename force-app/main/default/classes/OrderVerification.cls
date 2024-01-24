@@ -83,7 +83,29 @@ public class OrderVerification {
      * @return Boolean indicating whether the Order has associated products.
      */
     private static Boolean orderHasProducts(Id orderId) {
+        // Query to check the number of OrderItems associated with the Order.
+        Integer count = [SELECT count() FROM OrderItem WHERE OrderId = :orderId];
+    
+        // If there are OrderItems, also check and update the related Account's Active__c field.
+        if (count > 0) {
+            // Query to get the related Account of the Order.
+            Order relatedOrder = [SELECT AccountId FROM Order WHERE Id = :orderId LIMIT 1];
+            Id accountId = relatedOrder.AccountId;
+    
+            // If the Order has a related Account, check and update its Active__c field.
+            if (accountId != null) {
+                Account relatedAccount = [SELECT Id, Active__c FROM Account WHERE Id = :accountId LIMIT 1];
+    
+                // If the Account's Active__c field is not true, update it.
+                if (relatedAccount.Active__c != true) {
+                    relatedAccount.Active__c = true;
+                    update relatedAccount; // Perform the update operation.
+                }
+            }
+        }
+    
         // Return true if there are one or more OrderItems associated with the Order.
-        return ([SELECT count() FROM OrderItem WHERE OrderId = :orderId] > 0);
+        return (count > 0);
     }
+    
 }
