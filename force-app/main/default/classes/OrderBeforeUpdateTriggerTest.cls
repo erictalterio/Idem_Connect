@@ -36,15 +36,51 @@ private class OrderBeforeUpdateTriggerTest {
 
     }
 
-    // This test method verifies that an Order with associated OrderItems can be updated successfully
+    // Test method to verify successful update of an Order with associated OrderItems
     @isTest
     static void testOrderUpdateWithProducts() {
-        // Query for the Order and OrderItem, perform an update, and then assert the update is successful
+        // Retrieve the test Order and related PricebookEntry
+        Order testOrder = [SELECT Id FROM Order LIMIT 1];
+        PricebookEntry standardPricebookEntry = [SELECT Id FROM PricebookEntry LIMIT 1];
+
+        // Create an OrderItem for the test Order
+        OrderItem testOrderItem = new OrderItem(
+            OrderId = testOrder.Id,
+            PricebookEntryId = standardPricebookEntry.Id,
+            Quantity = 1,
+            UnitPrice = 100.0
+        );
+        insert testOrderItem;
+
+        // Update the Order status and assert the update is successful
+        testOrder.Status = 'Activated';
+        Test.startTest();
+        update testOrder;
+        Test.stopTest();
+
+        // Reload the order from the database and verify the status
+        Order updatedOrder = [SELECT Status FROM Order WHERE Id = :testOrder.Id];
+        System.assertEquals('Activated', updatedOrder.Status, 'Order should be activated with associated products.');
     }
 
-    // This test method ensures that updating an Order without associated OrderItems fails with an expected exception
+    // Test method to ensure updating an Order without associated OrderItems fails
     @isTest
     static void testOrderUpdateWithoutProducts() {
-        // Query for an Order without OrderItem, attempt an update, and assert that the expected exception is thrown
+        // Retrieve the test Order
+        Order testOrder = [SELECT Id FROM Order LIMIT 1];
+
+        // Attempt to update the Order status and expect an exception
+        testOrder.Status = 'Activated';
+        Boolean exceptionThrown = false;
+        Test.startTest();
+        try {
+            update testOrder; // This update should fail due to trigger validation
+        } catch (DmlException e) {
+            exceptionThrown = true;
+        }
+        Test.stopTest();
+
+        // Assert that an exception was thrown
+        System.assert(exceptionThrown, 'An exception should be thrown when activating an order without products.');
     }
 }
