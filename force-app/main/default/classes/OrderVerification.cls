@@ -64,7 +64,7 @@ public class OrderVerification {
         // Loop through the list of orders.
         // If an order is not already activated and has associated products, prepare it for update.
         for (Order ord : orders) {
-            if (ord.Status != 'Activated' && orderHasProducts(ord.Id)) {
+            if (ord.Status != 'Activated') {
                 ordersToUpdate.add(new Order(Id = ord.Id, Status = 'Activated'));
             }
         }
@@ -75,37 +75,34 @@ public class OrderVerification {
         }
     }
 
-    /**
-     * Checks if a specific Order has associated products (OrderItems).
-     * This method performs a SOQL query to count the number of OrderItems linked to the Order.
-     *
-     * @param orderId The ID of the Order to check.
-     * @return Boolean indicating whether the Order has associated products.
-     */
-    private static Boolean orderHasProducts(Id orderId) {
-        // Query to check the number of OrderItems associated with the Order.
-        Integer count = [SELECT count() FROM OrderItem WHERE OrderId = :orderId];
+    public static void activateRelatedAccounts(List<Order> orders) {
+        // Initialize a set to store unique Account IDs associated with the provided orders.
+        Set<Id> accIds = new Set<Id>();
     
-        // If there are OrderItems, also check and update the related Account's Active__c field.
-        if (count > 0) {
-            // Query to get the related Account of the Order.
-            Order relatedOrder = [SELECT AccountId FROM Order WHERE Id = :orderId LIMIT 1];
-            Id accountId = relatedOrder.AccountId;
+        // Loop through each order and add its associated Account ID to the set.
+        // This avoids duplicate Account IDs and unnecessary processing.
+        for(Order orderItem : [SELECT AccountId FROM Order WHERE Id In:orders]){
+            accIds.add(orderItem.AccountId);
+        }
     
-            // If the Order has a related Account, check and update its Active__c field.
-            if (accountId != null) {
-                Account relatedAccount = [SELECT Id, Active__c FROM Account WHERE Id = :accountId LIMIT 1];
+        // Initialize a list to hold Account records that need to be updated.
+        List<Account> acctoupdate = new List<Account>();
     
-                // If the Account's Active__c field is not true, update it.
-                if (relatedAccount.Active__c != true) {
-                    relatedAccount.Active__c = true;
-                    update relatedAccount; // Perform the update operation.
-                }
+        // Retrieve the Accounts associated with the orders and check their Active__c field.
+        // This loop only processes Accounts where Active__c is currently false.
+        for (Account acc : [SELECT Active__c FROM Account WHERE Id IN:accIds]){
+            if(!acc.Active__c){
+                // Set the Active__c field to true for Accounts that are not active.
+                acc.Active__c = true;
+                // Add the modified Account to the list for bulk update.
+                acctoupdate.add(acc);
             }
         }
     
-        // Return true if there are one or more OrderItems associated with the Order.
-        return (count > 0);
+        // Perform a bulk update on the Accounts to activate them.
+        // This operation is efficient and minimizes the number of DML statements.
+        update acctoupdate;
     }
     
+
 }

@@ -62,4 +62,34 @@ public class OrderVerificationTest
             System.assertEquals('Activated', ord.Status, 'Order status should be Activated.');
         }
     }
+
+    // This test method is used to verify the behavior of the 'activateRelatedAccounts' method.
+@isTest
+static void testActivateRelatedAccounts()
+{
+    // Create test data: Accounts
+    Account testAccount1 = new Account(Name = 'Test Account 1', Active__c = false);
+    Account testAccount2 = new Account(Name = 'Test Account 2', Active__c = true);
+    insert new List<Account>{testAccount1, testAccount2};
+
+    // Create test data: Orders associated with Accounts
+    Order testOrder1 = new Order(Status = 'Draft', AccountId = testAccount1.Id, EffectiveDate = Date.today().addDays(1)); // Provide a future EffectiveDate
+    Order testOrder2 = new Order(Status = 'Draft', AccountId = testAccount2.Id, EffectiveDate = Date.today().addDays(2)); // Provide a future EffectiveDate
+    Order testOrder3 = new Order(Status = 'Draft', AccountId = testAccount2.Id, EffectiveDate = Date.today().addDays(3)); // Provide a future EffectiveDate
+    insert new List<Order>{testOrder1, testOrder2, testOrder3};
+
+    // Call the method to be tested
+    Test.startTest();
+    OrderVerification.activateRelatedAccounts(new List<Order>{testOrder1, testOrder2, testOrder3});
+    Test.stopTest();
+
+    // Re-query the accounts to get the latest Active__c values
+    List<Account> updatedAccounts = [SELECT Id, Active__c FROM Account WHERE Id IN (:testAccount1.Id, :testAccount2.Id)];
+
+    // Assert the results
+    for (Account acc : updatedAccounts) {
+        // Check if the Account's Active__c field is updated to true
+        System.assertEquals(true, acc.Active__c, 'Account Active__c should be updated to true.');
+    }
+}
 }

@@ -14,6 +14,12 @@ public class OrderTriggerHandler {
         // If an Order does not meet the criteria, an error is added to the Order record,
         // preventing the update from being successful.
         OrderVerification.verifyOrderHasProducts(newOrders);
+
+         // Call the activateOrder method to activate eligible orders.
+         OrderVerification.activateOrder(newOrders);
+
+        // Call the activateRelatedAccounts method to activate related accounts.
+        OrderVerification.activateRelatedAccounts(newOrders);
     }
 
     /**
